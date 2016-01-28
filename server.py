@@ -2,7 +2,7 @@ import tornado.httpserver
 import tornado.ioloop
 from tornado.options import options
 
-from routes import Application
+from router import Application
 from config import define
 
 def main():
