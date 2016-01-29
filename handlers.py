@@ -1,12 +1,11 @@
 from tornado import gen
 import tornado.web
-import tornado.options
+from tornado.options import options
 import tornado.escape
 
 import motor
-import jwt
 
-from utils import shortid_generate, check_uname_passwd, check_email, passwd_hash, check_passwd, default_json_response
+from utils import shortid_generate, check_uname_passwd, check_email, passwd_hash, check_passwd, default_json_response, token_encode, token_decode
 
 class BaseHandler(tornado.web.RequestHandler):
     @property
@@ -14,11 +13,14 @@ class BaseHandler(tornado.web.RequestHandler):
         return self.application.db
 
     def get_current_user(self):
-        user = jwt.decode(self.get_argument("authorization", None), options.secret_key)
-        if user and self.db.user.find({"_id": user}).count():
-            return self.db.user.find_one({"_id": user})
-        self.send_error(401)
-        return False
+        response = default_json_response()
+        userid = token_decode(str(self.get_argument("authorization", None)), options.secret_key)
+        if not userid:
+            return None
+        res = self.db.user.find({"id": userid['id']}).count()
+        if res:
+            return userid['id']
+        return None
         
         
 class HomeHandler(BaseHandler):
@@ -34,8 +36,7 @@ class RegisterHandler(BaseHandler):
         email = str(self.get_body_argument("email", None))
         if not check_uname_passwd(username, password) or not check_email(email):
             self.set_status(400)
-            response['status'] = 400
-            response['error'] = "The type of username or password or email is error"
+            response['msg'] = "The type of username or password or email is error"
             self.write(response)
             return
         userid = shortid_generate()
@@ -45,13 +46,12 @@ class RegisterHandler(BaseHandler):
         db_email = yield self.db.user.find({'email': str(email)}).count()
         if db_uname or db_email:
             self.set_status(400)
-            response['status'] = 400
             if db_email and db_uname:
-                response['error'] = "The email and username have exited"
+                response['msg'] = "The email and username have exited"
             elif db_email:
-                response['error'] = "The email have exited"
+                response['msg'] = "The email have exited"
             else:
-                response['error'] = "The username have exited"
+                response['msg'] = "The username have exited"
             self.write(response)
             return 
         try:
@@ -59,28 +59,48 @@ class RegisterHandler(BaseHandler):
         except Exception as e:
             # add log here
             self.set_status(404)
-            response['status'] = 404
             response['msg'] = "Register Error."
             self.write(response)
             return
         if result:
             self.set_status(201)
-            response['status'] = 201
             response['msg'] = "Register Success"
             self.write(response)
             return
 
 class LoginHandler(BaseHandler):
-    def get(self):
-        json = {"id": "fsdhfhskjdhfkjs"}
-        self.write(tornado.escape.json_encode(json))
-    
+    @gen.coroutine
     def post(self):
-        username = self.get_argument("username", None)
-        password = self.get_argument("password", None)
+        response = default_json_response()
+        username = str(self.get_body_argument("username", None))
+        password = str(self.get_body_argument("password", None))
         if not check_uname_passwd(username, password):
             self.set_status(400)
-            self.write({"error": "the type of username or password is error"})
-        passwd_hashed = self.db.user.find_one({"username": username})["password"]
-        if bcrypt.hashpw(password, passwd_hashed) == passwd_hashed:
-            pass
+            response['msg'] = "The type of username or password or email is error"
+            self.write(response)
+            return
+        user_exist = yield self.db.user.find({"username": username}).count()
+        if not user_exist:
+            self.set_status(400)
+            response['msg'] = "The user doesn't exit"
+            self.write(response)
+            return
+        hashed = yield self.db.user.find({"username": username}).distinct("password")
+        if check_passwd(password, str(hashed[0])):
+            userid = yield user.distinct("id")
+            token = token_encode({"id": userid}, options.secret_key)
+            self.set_status(200)
+            response['token'] = token
+            response['msg'] = "Login Success"
+            self.write(response)
+            return
+        self.set_status(401)
+        response['msg'] = "The password was error"
+        self.write(response)
+        return
+
+
+
+
+
+

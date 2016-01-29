@@ -1,13 +1,12 @@
 from shortid import ShortId
 import re
 import bcrypt
+import jwt
 
 def default_json_response():
 	return {\
-		'status': '', \
-		'id': '', \
-		'username': '', \
 		'msg': '', \
+		'token': '', \
 	}
 
 def check_uname_passwd(username, password):
@@ -32,3 +31,11 @@ def check_passwd(password, hashed):
 	if bcrypt.hashpw(password, hashed) == hashed:
 		return True
 	return False
+
+def token_encode(dictionary, key):
+	return jwt.encode(dictionary, key, algorithm='HS256')
+
+
+def token_decode(dictionary, key):
+	return jwt.decode(dictionary, key, algorithms=['HS256'])
+

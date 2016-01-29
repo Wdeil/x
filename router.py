@@ -31,22 +31,8 @@ class Application(tornado.web.Application):
             xheaders = True,
 
             debug = options.debug,
-            serve_traceback = options.debug, #If true, the default error page will include the traceback of the error. 
+            #serve_traceback = options.debug, #If true, the default error page will include the traceback of the error. 
         )
         super(Application, self).__init__(handlers, **settings)
-        # Have one global connection to the blog DB across all handlers
         client = motor.motor_tornado.MotorClient('mongodb://localhost:27017')
         self.db = client.test
-
-    #     self.maybe_create_tables()
-
-    # def maybe_create_tables(self):
-    #     try:
-    #         self.db.get("SELECT COUNT(*) from entries;")
-    #     except MySQLdb.ProgrammingError:
-    #         subprocess.check_call(['mysql',
-    #                                '--host=' + options.mysql_host,
-    #                                '--database=' + options.mysql_database,
-    #                                '--user=' + options.mysql_user,
-    #                                '--password=' + options.mysql_password],
-    #                               stdin=open('schema.sql'))
