@@ -6,7 +6,7 @@ import motor
 import os.path
 
 
-from modules import HomeHandler
+from handlers import HomeHandler, RegisterHandler, LoginHandler
 from config import define
 
 
@@ -15,6 +15,8 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r"/", HomeHandler),
+            (r"/api/register", RegisterHandler),
+            (r"/api/login", LoginHandler),
         ]
         settings = dict(
             blog_title = u"x",
@@ -22,10 +24,12 @@ class Application(tornado.web.Application):
             
             #ui_modules = {"Entry": EntryModule}, #Unkown
             
-            xsrf_cookies = True,
+            # xsrf_cookies = True,
             cookie_secret = "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
             login_url = "/auth/login",
             
+            xheaders = True,
+
             debug = options.debug,
             serve_traceback = options.debug, #If true, the default error page will include the traceback of the error. 
         )

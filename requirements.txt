@@ -2,3 +2,4 @@ pip install pyjwt
 pip install motor
 pip install tornado
 pip install shortid
+pip install bcrypt #apt-get install build-essential libffi-dev python-dev
