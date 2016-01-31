@@ -12,20 +12,35 @@ class BaseHandler(tornado.web.RequestHandler):
     def db(self):
         return self.application.db
 
-    def get_current_user(self):
-        response = default_json_response()
-        userid = token_decode(str(self.get_argument("authorization", None)), options.secret_key)
+    @gen.coroutine
+    def user_author(self):
+        userid = token_decode(str(self.get_argument("authorization", None)), options.secret_key)['id']
+        if userid:
+            yield self.db.user.find({"id": userid}).count()
+
+    @gen.coroutine
+    def admin_author(self):
+        userid = token_decode(str(self.get_argument("authorization", None)), options.secret_key)['id']
         if not userid:
             return None
-        res = self.db.user.find({"id": userid['id']}).count()
+        res = self.db.user.find({"id": userid}).distinct('admin_auth')
         if res:
             return userid['id']
         return None
-        
-        
+
 class HomeHandler(BaseHandler):
+    @gen.coroutine
     def get(self):
-        self.write("Hello, world")
+        response = default_json_response()
+        # self.write("Hello, world")
+        self.write(response)
+        # response = default_json_response()
+        # res = yield self.db.user.find({}).count()
+        # response['usernum'] = res
+        # response['type'] = options.secret_key
+        # if self.user_author:
+        #     self.write(response)
+        # self.finish()
 
 class RegisterHandler(BaseHandler):
     @gen.coroutine
@@ -41,7 +56,7 @@ class RegisterHandler(BaseHandler):
             return
         userid = shortid_generate()
         passwd = passwd_hash(str(password))
-        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), }
+        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'admin_auth': 0 }
         db_uname = yield self.db.user.find({'username': str(username)}).count()
         db_email = yield self.db.user.find({'email': str(email)}).count()
         if db_uname or db_email:
@@ -76,16 +91,17 @@ class LoginHandler(BaseHandler):
         password = str(self.get_body_argument("password", None))
         if not check_uname_passwd(username, password):
             self.set_status(400)
-            response['msg'] = "The type of username or password or email is error"
+            response['msg'] = "The type of username or password is error"
             self.write(response)
             return
-        user_exist = yield self.db.user.find({"username": username}).count()
-        if not user_exist:
+        user = self.db.user.find({"username": username})
+        user_count = yield user.count()
+        if not user_count:
             self.set_status(400)
             response['msg'] = "The user doesn't exit"
             self.write(response)
             return
-        hashed = yield self.db.user.find({"username": username}).distinct("password")
+        hashed = yield user.distinct("password")
         if check_passwd(password, str(hashed[0])):
             userid = yield user.distinct("id")
             token = token_encode({"id": userid}, options.secret_key)
@@ -99,8 +115,18 @@ class LoginHandler(BaseHandler):
         self.write(response)
         return
 
-
-
+class ChallengesHandler(BaseHandler):
+    @gen.coroutine
+    def get(self):
+        response = default_json_response()
+        response['token'] = str(self.get_argument("authorization", None))
+        if not self.current_user():
+            self.set_status(401)
+            response['msg'] = "User doesn't login"
+            self.write(response)
+            return
+        respone['challenges'] = {}
+        challenges = yield self.db.challenge.find({})
 
 
 

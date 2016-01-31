@@ -1,6 +1,6 @@
 from shortid import ShortId
 import re
-import bcrypt
+import hashlib
 import jwt
 
 def default_json_response():
@@ -24,11 +24,11 @@ def shortid_generate():
 
 
 def passwd_hash(password):
-	hashed = bcrypt.hashpw(password, bcrypt.gensalt())
+	hashed = hashlib.sha256(password.encode('utf-8')).hexdigest()
 	return hashed
 
 def check_passwd(password, hashed):
-	if bcrypt.hashpw(password, hashed) == hashed:
+	if hashlib.sha256(password.encode('utf-8')).hexdigest() == hashed:
 		return True
 	return False
 
