@@ -155,12 +155,12 @@ class ChallengesHandler(BaseHandler):
         challenges, user = yield [self.db.challenges.find({}).sort('category').to_list(None), self.db.user.find_one({'username': username})]
         solved_id = user.get('solved_id', [])
         for challenge in challenges:
-            if str(challenge['category']) not in response['challenges']:
-                response['challenges'][str(challenge['category'])] = []
-            docu = {'id': str(challenge['id']), 'description': str(challenge['description']), 'title': str(challenge['title']), 'value': str(challenge['value']), 'done': False}
-            if challenge['id'] in solved_id:
+            if str(challenge.get('category', '')) not in response['challenges']:
+                response['challenges'][str(challenge.get('category', ''))] = []
+            docu = {'id': str(challenge.get('id', '')), 'description': str(challenge.get('description', '')), 'title': str(challenge.get('title', '')), 'value': str(challenge.get('value', '')), 'done': False}
+            if challenge.get('id', '') in solved_id:
                 docu['done'] = True
-            response['challenges'][str(challenge['category'])].append(docu)
+            response['challenges'][str(challenge.get('category', ''))].append(docu)
         response['msg'] = "Get challenges Done"
         self.write(response)
         return
@@ -209,12 +209,12 @@ class ChallengesIDHandler(BaseHandler):
         challenge_ID = self.request.uri.split("/")[3]
         challenge, user = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.user.find_one({'username': username})]
         solved_id = user.get('solved_id', [])
-        if str(challenge['category']) not in response['challenges']:
-            response['challenges'][str(challenge['category'])] = []
-        docu = {'id': str(challenge['id']), 'description': str(challenge['description']), 'title': str(challenge['title']), 'value': int(challenge['value']), 'done': False}
-        if challenge['id'] in solved_id:
+        if str(challenge.get('category', '')) not in response['challenges']:
+            response['challenges'][str(challenge.get('category', ''))] = []
+        docu = {'id': str(challenge.get('id', '')), 'description': str(challenge.get('description', '')), 'title': str(challenge.get('title', '')), 'value': str(challenge.get('value', '')), 'done': False}
+        if challenge.get('id', '') in solved_id:
             docu['done'] = True
-        response['challenges'][str(challenge['category'])].append(docu)
+        response['challenges'][str(challenge.get('category', ''))].append(docu)
         response['msg'] = "Get challenge Done"
         self.write(response)
         return        
