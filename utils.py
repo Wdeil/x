@@ -3,11 +3,6 @@ import re
 import hashlib
 import jwt
 
-def default_json_response():
-	return {\
-		'msg': '', \
-		'token': '', \
-	}
 
 def check_uname_passwd(username, password):
     if username and password and isinstance(username, str) and isinstance(password, str):
@@ -39,3 +34,5 @@ def token_encode(dictionary, key):
 def token_decode(dictionary, key):
 	return jwt.decode(dictionary, key, algorithms=['HS256'])
 
+def user_safe(dictionary):
+	dictionary.pop('password')

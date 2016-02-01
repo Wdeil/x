@@ -5,7 +5,7 @@ import tornado.escape
 
 import motor
 
-from utils import shortid_generate, check_uname_passwd, check_email, passwd_hash, check_passwd, default_json_response, token_encode, token_decode
+from utils import shortid_generate, check_uname_passwd, check_email, passwd_hash, check_passwd, token_encode, token_decode, user_safe
 
 class BaseHandler(tornado.web.RequestHandler):
     @property
@@ -14,41 +14,64 @@ class BaseHandler(tornado.web.RequestHandler):
 
     @gen.coroutine
     def user_author(self):
-        userid = token_decode(str(self.get_argument("authorization", None)), options.secret_key)['id']
-        if userid:
-            yield self.db.user.find({"id": userid}).count()
+        token = self.request.headers.get('authorization', '')
+        if token:
+            userid = str(token_decode(str(token), options.secret_key)['id'])
+            user = yield self.db.user.find_one({"id": userid})
+            if user:
+                raise gen.Return(str(user.get('username', '')))
+        raise gen.Return('')
 
     @gen.coroutine
     def admin_author(self):
-        userid = token_decode(str(self.get_argument("authorization", None)), options.secret_key)['id']
-        if not userid:
-            return None
-        res = self.db.user.find({"id": userid}).distinct('admin_auth')
-        if res:
-            return userid['id']
-        return None
+        token = self.request.headers.get('authorization', '')
+        if token:
+            userid = str(token_decode(str(token), options.secret_key)['id'])
+            user = yield self.db.user.find_one({"id": userid})
+            if user and user.get('admin_auth', ''):
+                raise gen.Return(str(user.get('username', ''))) 
+        raise gen.Return('')
 
 class HomeHandler(BaseHandler):
     @gen.coroutine
-    def get(self):
-        response = default_json_response()
+    def post(self):
+        response = {}
         # self.write("Hello, world")
-        self.write(response)
-        # response = default_json_response()
-        # res = yield self.db.user.find({}).count()
-        # response['usernum'] = res
-        # response['type'] = options.secret_key
-        # if self.user_author:
-        #     self.write(response)
-        # self.finish()
+        # self.write(response)
+        res = yield self.db.user.find_one({'username': 'test'})
+        res['passwd'] = str(type(res.get('password')))
+        user_safe(res)
+        response['user'] = str(res)
+        username, admin = yield [self.user_author(), self.admin_author()]
+        if username:
+            response['username'] = username
+        response['usernametype'] = str(type(username))
+        if admin:
+            response['admin'] = admin
+        # if username:
+        if res:
+            headers = self.request.headers.get('authorization', '')
+            response['head'] = str(type(headers))
+            # response['usename1'] = str(username)
+            # response['type1'] = str(type(username))
+            self.write(response)
+        else:
+            # response['usename2'] = str(username)
+            # response['type2'] = str(type(username))
+            self.write('response')
+        self.finish()
+
+        # user_count = yield self.db.user.find({}).count()
+        # response.add({'num': user_count})
+        # self.write(response)
 
 class RegisterHandler(BaseHandler):
     @gen.coroutine
     def post(self):
-        response = default_json_response()
-        username = str(self.get_body_argument("username", None))
-        password = str(self.get_body_argument("password", None))
-        email = str(self.get_body_argument("email", None))
+        response = {}
+        username = str(self.get_body_argument("username", ''))
+        password = str(self.get_body_argument("password", ''))
+        email = str(self.get_body_argument("email", ''))
         if not check_uname_passwd(username, password) or not check_email(email):
             self.set_status(400)
             response['msg'] = "The type of username or password or email is error"
@@ -56,9 +79,8 @@ class RegisterHandler(BaseHandler):
             return
         userid = shortid_generate()
         passwd = passwd_hash(str(password))
-        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'admin_auth': 0 }
-        db_uname = yield self.db.user.find({'username': str(username)}).count()
-        db_email = yield self.db.user.find({'email': str(email)}).count()
+        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'admin_auth': 0, 'solved_id': [] }
+        db_uname, db_email = yield [self.db.user.find({'username': str(username)}).count(), self.db.user.find({'email': str(email)}).count()]
         if db_uname or db_email:
             self.set_status(400)
             if db_email and db_uname:
@@ -86,24 +108,23 @@ class RegisterHandler(BaseHandler):
 class LoginHandler(BaseHandler):
     @gen.coroutine
     def post(self):
-        response = default_json_response()
-        username = str(self.get_body_argument("username", None))
-        password = str(self.get_body_argument("password", None))
+        response = {}
+        username = str(self.get_body_argument("username", ''))
+        password = str(self.get_body_argument("password", ''))
         if not check_uname_passwd(username, password):
             self.set_status(400)
             response['msg'] = "The type of username or password is error"
             self.write(response)
             return
-        user = self.db.user.find({"username": username})
-        user_count = yield user.count()
-        if not user_count:
+        user = yield self.db.user.find_one({"username": username})
+        if not user:
             self.set_status(400)
             response['msg'] = "The user doesn't exit"
             self.write(response)
             return
-        hashed = yield user.distinct("password")
-        if check_passwd(password, str(hashed[0])):
-            userid = yield user.distinct("id")
+        hashed = str(user.get('password'))
+        if check_passwd(password, hashed):
+            userid = str(user.get('id'))
             token = token_encode({"id": userid}, options.secret_key)
             self.set_status(200)
             response['token'] = token
@@ -118,15 +139,97 @@ class LoginHandler(BaseHandler):
 class ChallengesHandler(BaseHandler):
     @gen.coroutine
     def get(self):
-        response = default_json_response()
-        response['token'] = str(self.get_argument("authorization", None))
-        if not self.current_user():
+        response = {}
+        username = yield self.user_author()
+        if not username:
             self.set_status(401)
             response['msg'] = "User doesn't login"
             self.write(response)
             return
-        respone['challenges'] = {}
-        challenges = yield self.db.challenge.find({})
+        response['challenges'] = {}
+        challenges, user = yield [self.db.challenges.find({}).sort('category').to_list(None), self.db.user.find_one({'username': username})]
+        solved_id = user.get('solved_id', [])
+        for challenge in challenges:
+            if str(challenge['category']) not in response['challenges']:
+                response['challenges'][str(challenge['category'])] = []
+            docu = {'id': str(challenge['id']), 'description': str(challenge['description']), 'title': str(challenge['title']), 'value': str(challenge['value']), 'done': False}
+            if challenge['id'] in solved_id:
+                docu['done'] = True
+            response['challenges'][str(challenge['category'])].append(docu)
+        response['msg'] = "Get challenges Done"
+        self.write(response)
+        return
 
+    @gen.coroutine
+    def post(self):
+        response = {}
+        admin_name = yield self.admin_author()
+        if not admin_name:
+            self.set_status(401)
+            response['msg'] = "Auth deny"
+            self.write(response)
+            return
+        category = str(self.get_body_argument("category", None))
+        title = str(self.get_body_argument("title", None))
+        description = str(self.get_body_argument("description", None))
+        value = str(self.get_body_argument("value", None))
+        flag = str(self.get_body_argument("flag", None))
+        challenge_id = shortid_generate()
+        challenge = {'id': challenge_id, 'category': category, 'title': title, 'description': description, 'value': value, 'file': '', 'flag': flag,}
+        try:
+            result = yield self.db.challenges.insert(challenge)
+        except Exception as e:
+            # add log here
+            self.set_status(404)
+            response['msg'] = "Challenge Create Error."
+            self.write(response)
+            return
+        if result:
+            self.set_status(201)
+            response['msg'] = "Challenge Create Success"
+            self.write(response)
+            return
 
+class ChallengesIDHandler(BaseHandler):
+    @gen.coroutine
+    def get(self):
+        response = {}
+        username = yield self.user_author()
+        if not username:
+            self.set_status(401)
+            response['msg'] = "User doesn't login"
+            self.write(response)
+            return
+        response['challenges'] = {}
+        challenge_ID = self.request.uri.split("/")[3]
+        challenge, user = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.user.find_one({'username': username})]
+        solved_id = user.get('solved_id', [])
+        if str(challenge['category']) not in response['challenges']:
+            response['challenges'][str(challenge['category'])] = []
+        docu = {'id': str(challenge['id']), 'description': str(challenge['description']), 'title': str(challenge['title']), 'value': int(challenge['value']), 'done': False}
+        if challenge['id'] in solved_id:
+            docu['done'] = True
+        response['challenges'][str(challenge['category'])].append(docu)
+        response['msg'] = "Get challenge Done"
+        self.write(response)
+        return        
 
+    @gen.coroutine
+    def delete(self):
+        response = {}
+        admin_name = yield self.admin_author()
+        if not admin_name:
+            self.set_status(401)
+            response['msg'] = "Auth deny"
+            self.write(response)
+            return
+        response['challenges'] = {}
+        challenge_ID = self.request.uri.split("/")[3]
+        challenge, users = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.user.find({}).sort('username').to_list(None)]
+        delete_res = yield self.db.challenges.remove({'id': challenge_ID})
+        #{u'ok': 1, u'n': 1}
+        if delete_res['ok']:
+            value = int(challenge['value'])
+            for user in users:
+                if challenge_ID in user.get('solved_id', []):
+                    res = yield self.db.user.update({'id': str(user.get('id', ''))}, {'score': int(user.get('score', '')) - value})

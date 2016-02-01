@@ -1,6 +1,7 @@
 #my own#
 ########
 *.pyc
+data.py
 
 # Compiled source #
 ###################
