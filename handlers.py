@@ -34,32 +34,37 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class HomeHandler(BaseHandler):
     @gen.coroutine
-    def post(self):
+    def get(self):
         response = {}
+        # res = yield self.db.user.find_one({'username': 'test3'})
+        # res = yield self.db.user.update({'username': 'test3'}, {'$set': {'score': 200}})
+        #"{'updatedExisting': True, u'nModified': 1, u'ok': 1, u'n': 1}"
+        # response['update'] = str(res)
+        self.write(response)
         # self.write("Hello, world")
         # self.write(response)
-        res = yield self.db.user.find_one({'username': 'test'})
-        res['passwd'] = str(type(res.get('password')))
-        user_safe(res)
-        response['user'] = str(res)
-        username, admin = yield [self.user_author(), self.admin_author()]
-        if username:
-            response['username'] = username
-        response['usernametype'] = str(type(username))
-        if admin:
-            response['admin'] = admin
+        # res = yield self.db.user.find_one({'username': 'test'})
+        # res['passwd'] = str(type(res.get('password')))
+        # user_safe(res)
+        # response['user'] = str(res)
+        # username, admin = yield [self.user_author(), self.admin_author()]
         # if username:
-        if res:
-            headers = self.request.headers.get('authorization', '')
-            response['head'] = str(type(headers))
-            # response['usename1'] = str(username)
-            # response['type1'] = str(type(username))
-            self.write(response)
-        else:
-            # response['usename2'] = str(username)
-            # response['type2'] = str(type(username))
-            self.write('response')
-        self.finish()
+        #     response['username'] = username
+        # response['usernametype'] = str(type(username))
+        # if admin:
+        #     response['admin'] = admin
+        # # if username:
+        # if res:
+        #     headers = self.request.headers.get('authorization', '')
+        #     response['head'] = str(type(headers))
+        #     # response['usename1'] = str(username)
+        #     # response['type1'] = str(type(username))
+        #     self.write(response)
+        # else:
+        #     # response['usename2'] = str(username)
+        #     # response['type2'] = str(type(username))
+        #     self.write('response')
+        # self.finish()
 
         # user_count = yield self.db.user.find({}).count()
         # response.add({'num': user_count})
@@ -79,7 +84,7 @@ class RegisterHandler(BaseHandler):
             return
         userid = shortid_generate()
         passwd = passwd_hash(str(password))
-        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'admin_auth': 0, 'solved_id': [] }
+        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'admin_auth': 0, 'solved_id': [], 'score': 0 }
         db_uname, db_email = yield [self.db.user.find({'username': str(username)}).count(), self.db.user.find({'email': str(email)}).count()]
         if db_uname or db_email:
             self.set_status(400)
@@ -227,9 +232,26 @@ class ChallengesIDHandler(BaseHandler):
         challenge_ID = self.request.uri.split("/")[3]
         challenge, users = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.user.find({}).sort('username').to_list(None)]
         delete_res = yield self.db.challenges.remove({'id': challenge_ID})
-        #{u'ok': 1, u'n': 1}
         if delete_res['ok']:
-            value = int(challenge['value'])
+            value = int(challenge.get('value', 0))
+            error_user = []
             for user in users:
                 if challenge_ID in user.get('solved_id', []):
-                    res = yield self.db.user.update({'id': str(user.get('id', ''))}, {'score': int(user.get('score', '')) - value})
+                    res = yield self.db.user.update({'id': str(user.get('id', ''))}, {'$set': {'score': int(user.get('score', '')) - value}})
+                    if not res['ok']:
+                        error_user.append(str(user.get('username', '')))
+            if error_user:
+                response['unfinished_modify_user'] = error_user
+                response['msg'] = 'Some user are not modified'
+                self.write(response)
+                return
+            response['msg'] = 'Delete ' + challenge_ID + ' Success'
+            self.write(response)
+        else:
+           response['msg'] = 'Delete ' + challenge_ID + ' Error'
+           self.write(response)
+        return
+
+
+
+
