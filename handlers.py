@@ -36,10 +36,14 @@ class HomeHandler(BaseHandler):
     @gen.coroutine
     def get(self):
         response = {}
-        # res = yield self.db.user.find_one({'username': 'test3'})
+        res = yield self.db.user.find_one({'username': 'test4'})
         # res = yield self.db.user.update({'username': 'test3'}, {'$set': {'score': 200}})
         #"{'updatedExisting': True, u'nModified': 1, u'ok': 1, u'n': 1}"
         # response['update'] = str(res)
+        if not res:
+            response['msg'] = 'find one'
+        else:
+            response['msg'] = 'not find one'
         self.write(response)
         # self.write("Hello, world")
         # self.write(response)
@@ -174,11 +178,16 @@ class ChallengesHandler(BaseHandler):
             response['msg'] = "Auth deny"
             self.write(response)
             return
-        category = str(self.get_body_argument("category", None))
-        title = str(self.get_body_argument("title", None))
-        description = str(self.get_body_argument("description", None))
-        value = str(self.get_body_argument("value", None))
-        flag = str(self.get_body_argument("flag", None))
+        category = str(self.get_body_argument("category", ''))
+        title = str(self.get_body_argument("title", ''))
+        description = str(self.get_body_argument("description", ''))
+        value = int(self.get_body_argument("value", 0))
+        flag = str(self.get_body_argument("flag", ''))
+        if not category or not title or not description or not value or not flag:
+            self.set_status(400)
+            response['msg'] = "Malformed Request"
+            self.write(response)
+            return
         challenge_id = shortid_generate()
         challenge = {'id': challenge_id, 'category': category, 'title': title, 'description': description, 'value': value, 'file': '', 'flag': flag,}
         try:
@@ -208,6 +217,11 @@ class ChallengesIDHandler(BaseHandler):
         response['challenges'] = {}
         challenge_ID = self.request.uri.split("/")[3]
         challenge, user = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.user.find_one({'username': username})]
+        if not challenge:
+            self.set_status(400)
+            response['msg'] = "Malformed Request"
+            self.write(response)
+            return
         solved_id = user.get('solved_id', [])
         if str(challenge.get('category', '')) not in response['challenges']:
             response['challenges'][str(challenge.get('category', ''))] = []
@@ -231,6 +245,11 @@ class ChallengesIDHandler(BaseHandler):
         response['challenges'] = {}
         challenge_ID = self.request.uri.split("/")[3]
         challenge, users = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.user.find({}).sort('username').to_list(None)]
+        if not challenge:
+            self.set_status(400)
+            response['msg'] = "Malformed Request"
+            self.write(response)
+            return
         delete_res = yield self.db.challenges.remove({'id': challenge_ID})
         if delete_res['ok']:
             value = int(challenge.get('value', 0))
