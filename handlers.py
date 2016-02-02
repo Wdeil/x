@@ -36,13 +36,15 @@ class HomeHandler(BaseHandler):
     @gen.coroutine
     def get(self):
         response = {}
-        res = yield self.db.user.find_one({'username': 'test4'})
+        res = yield self.db.challenges.find_one({'title': 'test'})
         # res = yield self.db.user.update({'username': 'test3'}, {'$set': {'score': 200}})
         #"{'updatedExisting': True, u'nModified': 1, u'ok': 1, u'n': 1}"
         # response['update'] = str(res)
-        if not res:
+        if res:
+            response['res'] = str(res)
             response['msg'] = 'find one'
         else:
+            response['res'] = str(res)
             response['msg'] = 'not find one'
         self.write(response)
         # self.write("Hello, world")
@@ -135,7 +137,6 @@ class LoginHandler(BaseHandler):
         if check_passwd(password, hashed):
             userid = str(user.get('id'))
             token = token_encode({"id": userid}, options.secret_key)
-            self.set_status(200)
             response['token'] = token
             response['msg'] = "Login Success"
             self.write(response)
@@ -242,7 +243,7 @@ class ChallengesIDHandler(BaseHandler):
             response['msg'] = "Auth deny"
             self.write(response)
             return
-        response['challenges'] = {}
+        # response['challenges'] = {}
         challenge_ID = self.request.uri.split("/")[3]
         challenge, users = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.user.find({}).sort('username').to_list(None)]
         if not challenge:
@@ -270,6 +271,58 @@ class ChallengesIDHandler(BaseHandler):
            response['msg'] = 'Delete ' + challenge_ID + ' Error'
            self.write(response)
         return
+
+    @gen.coroutine
+    def put(self):
+        response = {}
+        admin_name = yield self.admin_author()
+        if not admin_name:
+            self.set_status(401)
+            response['msg'] = "Auth deny"
+            self.write(response)
+            return
+        category = str(self.get_body_argument("category", ''))
+        title = str(self.get_body_argument("title", ''))
+        description = str(self.get_body_argument("description", ''))
+        value = int(self.get_body_argument("value", 0))
+        flag = str(self.get_body_argument("flag", ''))
+        if not category or not title or not description or not value or not flag:
+            self.set_status(400)
+            response['msg'] = "Malformed Request"
+            self.write(response)
+            return
+        challenge_ID = self.request.uri.split("/")[3]
+        challenge = yield self.db.challenges.find_one({'id': challenge_ID})
+        if not challenge:
+            self.set_status(400)
+            response['msg'] = "Malformed Request"
+            self.write(response)
+            return
+        docu_update = {'category': category, 'title': title, 'description': description, 'value': value, 'file': '', 'flag': flag,}
+        c_res_upda = yield self.db.challenges.update({'id': str(challenge.get('id', ''))}, {'$set':  docu_update})
+        if not c_res_upda['ok']:
+            self.set_status(404)
+            response['msg'] = "Change " + challenge_ID + " Error"
+            self.write(response)
+            return
+        diff_value = challenge.get('value', 0) - value
+        if diff_value:
+            users = yield self.db.user.find({}).sort('username').to_list(None)
+            for user in users:
+                if challenge_ID in user.get('solved_id', []):
+                    user_score = int(user.get('score', 0)) + diff_value
+                    u_res_upda = yield self.db.user.update({'id': str(user.get('id', ''))}, {'$set':  {'score': user_score}})
+                    if not u_res_upda['ok']:
+                        self.set_status(404)
+                        response['msg'] = "Change user score Error"
+                        self.write(response)
+                        return
+        response['msg'] = "Change " + challenge_ID + " Success"
+        self.write(response)
+        return
+
+
+
 
 
 
