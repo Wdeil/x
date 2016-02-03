@@ -5,7 +5,8 @@ import tornado.escape
 
 import motor
 import os
-import json
+# import json
+import datetime
 
 from utils import shortid_generate, check_uname_passwd, check_email, passwd_hash, check_passwd, token_encode, token_decode, user_safe, secure_filename
 
@@ -43,6 +44,7 @@ class HomeHandler(BaseHandler):
         res = yield self.db.users.find({"username" : "", "email" : "test@test.com"}).count()
         #"{'updatedExisting': True, u'nModified': 1, u'ok': 1, u'n': 1}"
         # response['update'] = str(res)
+        response['ip'] = self.request.remote_ip
         if res:
             response['res'] = str(res)
             response['msg'] = 'find one'
@@ -428,39 +430,55 @@ class ChallengesIDHandler(BaseHandler):
         response['msg'] = "Change " + challenge_ID + " Success"
         self.write(response)
         return
-############################################ 
+
     @gen.coroutine
     def post(self):
         response = {}
-        username = yield self.user_author()
-        if not username:
+        user_id = yield self.user_author()
+        if not user_id:
             self.set_status(401)
             response['msg'] = "User doesn't login"
             self.write(response)
             return
+
         flag = str(self.get_body_argument("flag", ''))
         challenge_ID = self.request.uri.split("/")[3]
-        challenge = yield self.db.challenges.find_one({'id': challenge_ID})
+        challenge, user = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.users.find_one({'id': user_id})]
         if not challenge or not flag:
             self.set_status(400)
             response['msg'] = "Malformed Request"
             self.write(response)
             return
-        user = yield self.db.users.find_one({'username': username})
+
         if challenge.get('flag', '') and challenge.get('flag', '') == flag:
-            solved_id = list(user.get('solved_id', []))
-            solved_id.appned(challenge_ID)
-            user_score = int(user.get('score', 0))
-            user_score += int(challenge.get('value', 0))
-            res = yield self.db.users.update({'username': username}, {'$set': {'solved_id': solved_id, 'score': user_score}})
+            user_score = int(user.get('score', 0)) + int(challenge.get('value', 0))
+            res = yield self.db.users.update({'id': user_id}, {'$set': {'score': user_score}})
             if not res['ok']:
                 self.set_status(404)
                 response['msg'] = "Submit Flag Error"
                 self.write(response)
                 return
-            response['msg'] = 'Submit Flag Success'
-            self.write(response)
-        else:
-            pass
 
+            docu = {'chalid': challenge_ID,\
+                     'userid': user_id, \
+                     'flag': flag, \
+                     'date': datetime.datetime.utcnow().isoformat(),\
+                     'category': str(challenge.get('category', 0)), \
+                     'title': str(challenge.get('title', 0)), \
+                     'ip': self.request.remote_ip}
+            res = yield self.db.solves.insert(docu)
+            response['msg'] = 'Submit Flag Success'
+        else:
+            docu = {'chalid': challenge_ID, \
+                     'userid': user_id, \
+                     'flag': flag, \
+                     'date': datetime.datetime.utcnow().isoformat(),\
+                     'category': str(challenge.get('category', 0)), \
+                     'title': str(challenge.get('title', 0)), \
+                     'ip': self.request.remote_ip}
+            res = yield self.db.fails.insert(docu)
+            response['msg'] = 'The Flag is wrong'
+        
+        self.write(response)
+        return
 
