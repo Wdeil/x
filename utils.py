@@ -2,6 +2,7 @@ from shortid import ShortId
 import re
 import hashlib
 import jwt
+from werkzeug.utils import secure_filename
 
 
 def check_uname_passwd(username, password):
@@ -23,7 +24,7 @@ def passwd_hash(password):
 	return hashed
 
 def check_passwd(password, hashed):
-	if hashlib.sha256(password.encode('utf-8')).hexdigest() == hashed:
+	if password and hashlib.sha256(password.encode('utf-8')).hexdigest() == hashed:
 		return True
 	return False
 
@@ -36,3 +37,8 @@ def token_decode(dictionary, key):
 
 def user_safe(dictionary):
 	dictionary.pop('password')
+
+def secure_filename(filename):
+	return secure_filename(filename)
+
+

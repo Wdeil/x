@@ -1,0 +1,189 @@
+------WebKitFormBoundaryQLKnD94jOK0fzOSE
+Content-Disposition: form-data; name="file1"; filename="dict.py"
+Content-Type: text/plain
+
+database:
+challenges:
+{
+	'id': 'shortid',
+	'name': str,
+	'description': str,
+	'value': int,
+	'category': str,
+	'flag': str,
+	'hidden': bool,
+}
+
+config:
+{
+	'id': int, # generator default
+	'key': str,
+	'value': str,
+}
+
+files:
+{
+	'id': int,
+	'chal': int,
+	'location': str,
+}
+
+keys:
+{
+	'id': int,
+	'chal': int,
+	'key_type': int,
+	'flag': str,	
+}
+
+pages:
+{
+	'id': str,
+	'route': str,
+	'html': str,
+}
+
+solves:
+{
+	'id': int,
+	'chalid': int,
+	'teamid': int,
+	'ip': int,
+	'flag': str,
+	'date': datetime,
+}
+
+tags:
+{
+	'id': int,
+	'chal': int,
+	'tag': str,
+}
+
+teams:
+{
+	'id': int,
+	'name': '',
+	'email': '',
+	'password': '',
+	'webiste': '',
+	'affiliation': '',
+	'coutry': '',
+	'bracket': '',
+	'banned': bool,
+	'admin': bool,
+}
+
+tracking:
+{
+	'id': '',
+	'ip': BIGINT,
+	'team': int,
+	'date': datetime,
+}
+
+wrong_keys:
+{
+	'id': int,
+	'chalid': int,
+	'team': int,
+	'date': datetime,
+	'flag': str,
+}
+
+
+------WebKitFormBoundaryQLKnD94jOK0fzOSE
+Content-Disposition: form-data; name="file2"; filename="dict.py"
+Content-Type: text/plain
+
+database:
+challenges:
+{
+	'id': 'shortid',
+	'name': str,
+	'description': str,
+	'value': int,
+	'category': str,
+	'flag': str,
+	'hidden': bool,
+}
+
+config:
+{
+	'id': int, # generator default
+	'key': str,
+	'value': str,
+}
+
+files:
+{
+	'id': int,
+	'chal': int,
+	'location': str,
+}
+
+keys:
+{
+	'id': int,
+	'chal': int,
+	'key_type': int,
+	'flag': str,	
+}
+
+pages:
+{
+	'id': str,
+	'route': str,
+	'html': str,
+}
+
+solves:
+{
+	'id': int,
+	'chalid': int,
+	'teamid': int,
+	'ip': int,
+	'flag': str,
+	'date': datetime,
+}
+
+tags:
+{
+	'id': int,
+	'chal': int,
+	'tag': str,
+}
+
+teams:
+{
+	'id': int,
+	'name': '',
+	'email': '',
+	'password': '',
+	'webiste': '',
+	'affiliation': '',
+	'coutry': '',
+	'bracket': '',
+	'banned': bool,
+	'admin': bool,
+}
+
+tracking:
+{
+	'id': '',
+	'ip': BIGINT,
+	'team': int,
+	'date': datetime,
+}
+
+wrong_keys:
+{
+	'id': int,
+	'chalid': int,
+	'team': int,
+	'date': datetime,
+	'flag': str,
+}
+
+
+------WebKitFormBoundaryQLKnD94jOK0fzOSE--
