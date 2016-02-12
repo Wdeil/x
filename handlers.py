@@ -548,7 +548,7 @@ class TeamsIDHandler(BaseHandler):
             return
 
         user_ID = self.request.uri.split("/")[3]
-        user, solves, failed = yield [self.db.users.find_one({'id': user_ID}), self.db.solves.find({'userid': user_ID}).sort('date').to_list(None), self.db.fails.find({'userid': user_ID}).count()]
+        user, solves, failed = yield [self.db.users.find_one({'id': user_ID}), self.db.solves.find({'userid': user_ID}).sort('date', -1).to_list(None), self.db.fails.find({'userid': user_ID}).count()]
         response['failed'] = failed
         response['score'] = user.get('score', 0)
         place = yield self.db.users.find({'score': {'$gt': user.get('score', 0)}}).count()
