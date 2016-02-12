@@ -2,7 +2,9 @@
 ########
 *.pyc
 data.py
-datebaseForm.py
+return.py
+command.py
+scheme.py
 
 # Compiled source #
 ###################

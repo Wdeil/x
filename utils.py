@@ -39,6 +39,7 @@ def user_safe(dictionary):
 	dictionary.pop('password')
 
 def secure_filename(filename):
-	return secure_filename(filename)
+	# return secure_filename(filename)
+	return str(filename)
 
 
