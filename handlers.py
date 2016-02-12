@@ -114,7 +114,7 @@ class RegisterHandler(BaseHandler):
 
         userid = shortid_generate()
         passwd = passwd_hash(str(password))
-        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'coutry': coutry, 'admin_auth': Falseup, 'score': 0, 'banned': False}
+        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'coutry': coutry, 'admin_auth': False, 'score': 0, 'banned': False}
         db_uname, db_email = yield [self.db.users.find({'username': str(username)}).count(), self.db.users.find({'email': str(email)}).count()]
         if db_uname or db_email:
             self.set_status(400)
@@ -547,7 +547,8 @@ class TeamsIDHandler(BaseHandler):
             self.write(response)
             return
 
-        user, solves, failed = yield [self.db.users.find_one({'id': user_id}), self.db.solves.find({'userid': user_id}).to_list(None), self.db.fails.find({'userid': user_id}).count()]
+        user_ID = self.request.uri.split("/")[3]
+        user, solves, failed = yield [self.db.users.find_one({'id': user_ID}), self.db.solves.find({'userid': user_ID}).sort('date').to_list(None), self.db.fails.find({'userid': user_ID}).count()]
         response['failed'] = failed
         response['score'] = user.get('score', 0)
         place = yield self.db.users.find({'score': {'$gt': user.get('score', 0)}}).count()
@@ -557,7 +558,7 @@ class TeamsIDHandler(BaseHandler):
             docu = {'category': str(solve.get('category', '')), 'title': str(solve.get('title', '')), 'date': str(solve.get('date', '')), 'value': int(solve.get('value', 0))}
             response['solved'].append(docu)
 
-        response['msg'] = 'Get ' + user_id + ' Information Success'
+        response['msg'] = 'Get ' + user_ID + ' Information Success'
 
 
         self.write(response)
