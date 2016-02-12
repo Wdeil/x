@@ -448,7 +448,7 @@ class ChallengesIDHandler(BaseHandler):
 
         flag = str(self.get_body_argument("flag", ''))
         challenge_ID = self.request.uri.split("/")[3]
-        challenge, user = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.users.find_one({'id': user_id})]
+        challenge, user, repeat = yield [self.db.challenges.find_one({'id': challenge_ID}), self.db.users.find_one({'id': user_id}), self.db.solves.find({'userid': user_id, 'chalid': challenge_ID}).count()]
         if not challenge or not flag:
             self.set_status(400)
             response['msg'] = "Malformed Request"
@@ -465,6 +465,10 @@ class ChallengesIDHandler(BaseHandler):
                  'ip': self.request.remote_ip}
 
         if challenge.get('flag', '') and challenge.get('flag', '') == flag:
+            if repeat:
+                response['msg'] = 'Submit Flag Success'
+                self.write(response)
+                return
             user_score = int(user.get('score', 0)) + int(challenge.get('value', 0))
             res = yield self.db.users.update({'id': user_id}, {'$set': {'score': user_score}})
             if not res['ok']:
