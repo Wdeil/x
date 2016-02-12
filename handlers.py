@@ -489,7 +489,7 @@ class ChallengesIDHandler(BaseHandler):
 class TeamsHandler(BaseHandler):
     @gen.coroutine
     def get(self):
-        response = {'teams': [], 'timeline': {}}
+        response = {'team': [], 'timeline': {}}
         user_id = yield self.user_author()
         admin_id = yield self.admin_author()
         if not user_id:
@@ -516,7 +516,7 @@ class TeamsHandler(BaseHandler):
                 else:
                     same_num += 1
                 docu['place'] = place
-                response['teams'].append(docu)
+                response['team'].append(docu)
                 if place <= 10:
                     user_score = 0
                     timeline = [[start_time, user_score]]
