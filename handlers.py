@@ -39,64 +39,11 @@ class BaseHandler(tornado.web.RequestHandler):
 class HomeHandler(BaseHandler):
     @gen.coroutine
     def get(self):
-        response = {}
-        # res = yield self.db.test.insert({'title': 'test'})
-        # res = yield self.db.users.update({'username': 'test3'}, {'$set': {'score': 200}})
-        # res = yield self.db.users.find({"username" : "", "email" : "test@test.com"}).count()
-        #"{'updatedExisting': True, u'nModified': 1, u'ok': 1, u'n': 1}"
-        # response['update'] = str(res)
-        # response['ip'] = self.request.remote_ip
-        # if res:
-        #     response['res'] = str(res)
-        #     response['msg'] = 'find one'
-        # else:
-        #     response['res'] = str(res)
-        #     response['msg'] = 'not find one'
+        pass
 
-
-        self.write(response)
-
-        # self.write("Hello, world")
-        # self.write(response)
-        # res = yield self.db.users.find_one({'username': 'test'})
-        # res['passwd'] = str(type(res.get('password')))
-        # user_safe(res)
-        # response['user'] = str(res)
-        # username, admin = yield [self.user_author(), self.admin_author()]
-        # if username:
-        #     response['username'] = username
-        # response['usernametype'] = str(type(username))
-        # if admin:
-        #     response['admin'] = admin
-        # # if username:
-        # if res:
-        #     headers = self.request.headers.get('authorization', '')
-        #     response['head'] = str(type(headers))
-        #     # response['usename1'] = str(username)
-        #     # response['type1'] = str(type(username))
-        #     self.write(response)
-        # else:
-        #     # response['usename2'] = str(username)
-        #     # response['type2'] = str(type(username))
-        #     self.write('response')
-        # self.finish()
-
-        # user_count = yield self.db.users.find({}).count()
-        # response.add({'num': user_count})
-        # self.write(response)
     @gen.coroutine
     def post(self):
-        response = {}
-        files = self.request.files
-        # files = self.get_body_argument('files', '')
-        # with open('result.txt', 'a') as f:
-        #     f.write(files)
-        # for x in files:
-        #     with open('test1.exe', 'w') as f:
-        #         f.write(files[x][0].get('body', ''))
-        response['files'] = str(files)
-        response['filestype'] = str(type(files))
-        self.write(response)
+        pass
 
 class RegisterHandler(BaseHandler):
     @gen.coroutine
@@ -565,22 +512,28 @@ class TeamsIDHandler(BaseHandler):
 
     @gen.coroutine
     def delete(self):
-        pass
-        # response = {}
-        # admin_id = yield self.admin_author()
-        # if not admin_id:
-        #     self.set_status(401)
-        #     response['msg'] = "Auth deny"
-        #     self.write(response)
-        #     return
+        # pass
+        response = {}
+        admin_id = yield self.admin_author()
+        if not admin_id:
+            self.set_status(401)
+            response['msg'] = "Auth deny"
+            self.write(response)
+            return
 
-        # user_ID = self.request.uri.split("/")[3]
+        user_ID = self.request.uri.split("/")[3]
 
-        # users_res, solves_res, fails_res = yield [self.db.challenges.remove({'id': challenge_ID}), self.db.challenges.remove({'id': challenge_ID}), self.db.challenges.remove({'id': challenge_ID}),]
+        users_res, solves_res, fails_res = yield [self.db.users.remove({'id': user_ID}), self.db.solves.remove({'userid': user_ID}), self.db.fails.remove({'userid': user_ID}),]
         
+        if not users_res['ok'] or not solves_res['ok'] or not fails_res['ok']:
+            self.set_status(404)
+            response['msg'] = "Remove " + user_ID + " Error"
+            self.write(response)
+            return
 
-
-
+        response['msg'] = "Remove " + user_ID + " Success"
+        self.write(response)
+        return
 
 
 

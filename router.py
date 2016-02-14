@@ -15,12 +15,12 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r"/", HomeHandler),
-            (r"/api/register", RegisterHandler),
-            (r"/api/login", LoginHandler),
-            (r"/api/challenges", ChallengesHandler),
-            (r"/api/challenges/[a-zA-Z0-9_-]{7,14}", ChallengesIDHandler),
-            (r"/api/teams", TeamsHandler),
-            (r"/api/teams/[a-zA-Z0-9_-]{7,14}", TeamsIDHandler),
+            (r"/api/register/?", RegisterHandler),
+            (r"/api/login/?", LoginHandler),
+            (r"/api/challenges/?", ChallengesHandler),
+            (r"/api/challenges/[a-zA-Z0-9_-]{7,14}/?", ChallengesIDHandler),
+            (r"/api/teams/?", TeamsHandler),
+            (r"/api/teams/[a-zA-Z0-9_-]{7,14}/?", TeamsIDHandler),
         ]
         settings = dict(
             blog_title = u"x",
@@ -29,8 +29,8 @@ class Application(tornado.web.Application):
             #ui_modules = {"Entry": EntryModule}, #Unkown
             
             # xsrf_cookies = True,
-            cookie_secret = "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
-            login_url = "/auth/login",
+            # cookie_secret = "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
+            # login_url = "/auth/login",
             
             xheaders = True,
 
