@@ -5,6 +5,7 @@ data.py
 return.py
 command.py
 scheme.py
+admintoken
 
 # Compiled source #
 ###################

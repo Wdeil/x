@@ -6,7 +6,7 @@ import motor
 import os.path
 
 
-from handlers import HomeHandler, RegisterHandler, LoginHandler, ChallengesHandler, ChallengesIDHandler, TeamsHandler, TeamsIDHandler
+from handlers import HomeHandler, RegisterHandler, LoginHandler, ChallengesHandler, ChallengesIDHandler, TeamsHandler, TeamsIDHandler, BoardsHandler
 from config import define
 
 
@@ -21,6 +21,7 @@ class Application(tornado.web.Application):
             (r"/api/challenges/[a-zA-Z0-9_-]{7,14}/?", ChallengesIDHandler),
             (r"/api/teams/?", TeamsHandler),
             (r"/api/teams/[a-zA-Z0-9_-]{7,14}/?", TeamsIDHandler),
+            (r"/api/boards/?", BoardsHandler),
         ]
         settings = dict(
             blog_title = u"x",

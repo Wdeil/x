@@ -59,9 +59,9 @@ class RegisterHandler(BaseHandler):
             self.write(response)
             return
 
-        userid = shortid_generate()
+        user_id = shortid_generate()
         passwd = passwd_hash(str(password))
-        user = {'id': userid, 'username': str(username), 'password': passwd, 'email': str(email), 'coutry': coutry, 'admin_auth': False, 'score': 0, 'banned': False}
+        user = {'id': user_id, 'username': str(username), 'password': passwd, 'email': str(email), 'coutry': coutry, 'admin_auth': False, 'score': 0, 'banned': False}
         db_uname, db_email = yield [self.db.users.find({'username': str(username)}).count(), self.db.users.find({'email': str(email)}).count()]
         if db_uname or db_email:
             self.set_status(400)
@@ -535,5 +535,54 @@ class TeamsIDHandler(BaseHandler):
         self.write(response)
         return
 
+class BoardsHandler(BaseHandler):
+    @gen.coroutine
+    def get(self):
+        response = {}
+        user_id = yield self.user_author()
+        if not user_id:
+            self.set_status(401)
+            response['msg'] = "User doesn't login"
+            self.write(response)
+            return
 
+        response['boards'] = []
 
+        boards = yield self.db.boards.find({}, {'_id': 0, 'id': 0}).sort('date', -1).to_list(None)
+        for board in boards:
+            response['boards'].append(board)
+
+        response['msg'] = "Get boards Success"
+        self.write(response)
+        return
+
+    @gen.coroutine
+    def post(self):
+        response = {}
+        admin_id = yield self.admin_author()
+        if not admin_id:
+            self.set_status(401)
+            response['msg'] = "Auth deny"
+            self.write(response)
+            return
+        
+        content = str(self.get_body_argument("content", ''))
+        if not content:
+            self.set_status(400)
+            response['msg'] = "Malformed Request"
+            self.write(response)
+            return
+
+        board_id = shortid_generate()
+        date = datetime.datetime.utcnow().isoformat()
+
+        board_res = yield self.db.boards.insert({'id': board_id, 'date': date, 'content': content})
+        if not board_res:
+            self.set_status(404)
+            response['msg'] = "Board Create Error"
+            self.write(response)
+            return
+
+        response['msg'] = "Board Create Success"
+        self.write(response)
+        return
